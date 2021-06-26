@@ -10,12 +10,23 @@
 
 #include"stdio.h"
 #include"buffpool.h"
-
+#include"process.h"
 
 void printBlocks();
 
-void printFile(struct File *file,int num);
+void printFile();
 
 void printBuffPool();
 
+void printProcess();
+
+void printInq();
+
+void printOutq();
+
+void printEmq();
+
+void rwUI();
+
+void viewUI();
 

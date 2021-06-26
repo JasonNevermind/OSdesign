@@ -3,7 +3,7 @@
 
 //读写文件------->最终目的！！！
 
-void initProcess()  //一开始都就绪队列
+void initProcess()  //一开始都就绪队列(倒着建立的,先输入的在队列尾)
 {
     ReadyQueue=(struct Process *)malloc(sizeof(struct Process));//头没用
     ReadyQueue->mod='x';
@@ -20,8 +20,11 @@ void initProcess()  //一开始都就绪队列
         s->next=tmp;
         printf("请输入进程%d的权限(mod),到达时间(Rtime),运行时间(time):\n",i);
         scanf(" %c",&tmp->mod);
-        scanf("%d %d",&tmp->Rtime,&tmp->time);
-        if(tmp->mod=='r'){
+        scanf("%d",&tmp->Rtime);
+        scanf("%d",&tmp->time);
+
+        //scanf("%c %d %d",&tmp->mod,&tmp->Rtime,&tmp->time);
+        if(tmp->mod=='w'){
             printf("请写入数据:\n");
             for(int i=0;i<4;i++){
                 scanf("%d",&tmp->content[i]);
@@ -34,52 +37,19 @@ void initProcess()  //一开始都就绪队列
     free(s);
 }
 
-void printProcess()
+void getData(int bufNum)    //Running Process get data from buf[bufNum]
 {
-    struct Process* tmp=ReadyQueue;
-    printf("进程ID\t进程状态\t进程权限\t到达时间\t运行时间\t\n");
-    while(tmp){
-        printf("%d\t%d\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,tmp->state,tmp->mod,tmp->Rtime,tmp->time);
-        tmp=tmp->next;
-    }
-    tmp=RunningQueue;
-    while(tmp){
-        printf("%d\t%d\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,tmp->state,tmp->mod,tmp->Rtime,tmp->time);
-        tmp=tmp->next;
-    }
-    tmp=BlockQueue;
-    while(tmp){
-        printf("%d\t%d\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,tmp->state,tmp->mod,tmp->Rtime,tmp->time);
-        tmp=tmp->next;
+    for(int i=0;i<4;i++)
+    {
+        RunningQueue->content[i]=Buf[bufNum].blocks[i];
     }
 }
-
-
-void rwUI()
+void putData(int bufNum)    //Running Process put data into buf[bufNum]
 {
-    printFile();
-    printf("进程%d想%c文件ID?:",RunningQueue->PID,RunningQueue->mod);
-    int numb=0;
-    scanf("%d",&numb);
-    //system("cls");
-    if(RunningQueue->mod=='r'){
-        printf("正在读取.....\n");
-        readfile(numb);
+    for(int i=0;i<4;i++)
+    {
+        Buf[bufNum].blocks[i]=RunningQueue->content[i];
     }
-    else if(RunningQueue->mod=='w'){
-        printf("正在写入.....\n");
-        writefile(numb);
-    }
-
-}
-
-void viewUI()
-{
-    printf("--------接下来您想进行的操作:--------\n");
-    printf("----  1.查看进程状态\t\n");
-    printf("----  2.查看文件\n");
-    printf("----  3.查看缓冲池\n");
-    printf("----  4.查看磁盘使用情况\n");
 }
 
 
@@ -91,6 +61,7 @@ void readfile(int fileNum)
 		//cant find
 		buffer_head *hin = take_buf(EMPQ);
 		//hin get disk data
+        read( hin->bufNo, fileNum );
 		bool b = add_buf(INQ, hin->bufNo);
 		if(!b)
 			inqLRU(hin->bufNo);
@@ -98,6 +69,7 @@ void readfile(int fileNum)
 		
 		buffer_head *sin = take_buf(INQ);
 		//process read sin's data
+        getData(sin->bufNo);
 		add_buf(EMPQ, sin->bufNo);
 		free(sin);
 	}
@@ -105,11 +77,23 @@ void readfile(int fileNum)
 		//can find
 		buffer_head *sin = take_buf(INQ);
 		//process read sin's data
+        getData(sin->bufNo);
 		add_buf(EMPQ, sin->bufNo);
 		free(sin);
 	}
     //print file's data
 
+    //等待时间到
+    printf("进程%d读到的内容是：",RunningQueue->PID);
+    for(int i=0;i<4;i++){
+        printf("%d ",RunningQueue->content[i]);
+    }
+    printf("\n");
+
+    printf("进程%d任务已结束!\n",RunningQueue->PID);
+    struct Process *p=RunningQueue;
+    RunningQueue=NULL;
+    free(p);
 }
 
 void writefile(int fileNum)    //目的是先写到缓冲，再将它写到blocks
@@ -117,6 +101,7 @@ void writefile(int fileNum)    //目的是先写到缓冲，再将它写到block
 
     buffer_head *hout = take_buf(EMPQ);
 	//process write hout
+    putData(hout->bufNo);
 	bool b = add_buf(OUTQ, hout->bufNo);
 	if(!b){
 		flush();		//延迟写，等缓冲队列满了再写
@@ -124,24 +109,82 @@ void writefile(int fileNum)    //目的是先写到缓冲，再将它写到block
 	}
 	free(hout);
 
-	buffer_head *sout = take_buf(OUTQ); 
+	buffer_head *sout = take_buf(OUTQ);
 	//disk get write-back data
+    write(sout->bufNo);
 	add_buf(EMPQ, sout->bufNo);
 	free(sout);
     //file context has changed
+
+    flushFile();
+    printf("进程%d内容已写入文件ID%d!\n",RunningQueue->PID,fileNum);
+    struct Process *p=RunningQueue;
+    RunningQueue=NULL;
+    free(p);
 }
 
-/*
-
-int main()
+void toRunning()
 {
-    //initProcess();
-    //printProcess();
-    
-    initemq();
-    printBuffPool();
-
-
-    return 0;
+    //每次从Ready头部拿一个Running
+    struct Process* tmp=ReadyQueue;
+    if(!RunningQueue){
+        RunningQueue=tmp;
+        RunningQueue->next=NULL;
+        ReadyQueue=ReadyQueue->next;
+    }
+    else{
+        printf("运行队列已满！");
+    }
 }
-*/
+
+void toBlock()
+{
+    //每次从Ready头部拿一个放到Block尾部
+    struct Process* tmp=ReadyQueue;
+    tmp->next=NULL;
+    ReadyQueue=ReadyQueue->next;
+    struct Process* t=BlockQueue;
+    if(t==NULL){
+        BlockQueue=tmp;
+        return;
+    }
+    struct Process* f=BlockQueue;
+    t=f->next;
+    while(t && !t->next){
+        f=f->next;
+        t=t->next;
+    }
+    if(!t){
+        f->next=tmp;
+        return ;
+    }
+    f->next==NULL;
+    t->next=BlockQueue;
+    BlockQueue=t;
+}
+
+void toReady()
+{
+    //每次从Block头部拿一个放到Ready尾部
+    struct Process* tmp=ReadyQueue;
+    tmp->next=NULL;
+    ReadyQueue=ReadyQueue->next;
+    struct Process* t=BlockQueue;
+    if(t==NULL){
+        BlockQueue=tmp;
+        return;
+    }
+    struct Process* f=BlockQueue;
+    t=f->next;
+    while(t && !t->next){
+        f=f->next;
+        t=t->next;
+    }
+    if(!t){
+        f->next=tmp;
+        return ;
+    }
+    f->next==NULL;
+    t->next=BlockQueue;
+    BlockQueue=t;
+}

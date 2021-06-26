@@ -27,7 +27,8 @@
 void initemq();
 void flush();//将缓冲区未满的强制写入
 void realse();
-void read(struct Buffer buf,struct File file);
+void read(int bufNum,int fileNum);
+void write(int bufNum);
 bool SearchAndLRU(int address);
 void inqLRU(int numb);
 

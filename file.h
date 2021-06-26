@@ -10,18 +10,22 @@
 
 #include"stdio.h"
 #define MAX_FILE_NUM 5
+#include"buffpool.h"
 
 struct File
 {
     int FileId;//文件id
-    int FileAddr;//文件地址
+    int FileAddr;//文件地址(连续分配  起始+偏移)
     int FileText[4];//文件内容(一个文件占用4个磁盘块)
 }file[MAX_FILE_NUM];
 
 //文件到底跟磁盘块怎样建立联系？
 
 void initFile();
-//struct File file[FILENUM]; 
+void flushFile();   //文件刷新
+
+
+
 /*
 1
 1 2 3 4
@@ -30,8 +34,5 @@ process1->file1
 inq->hinbuf(buf[i])
 buf[i].blocks get file1.text
 buf[i]->inq
-
-
-
 
 */

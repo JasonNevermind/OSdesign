@@ -3,7 +3,7 @@
 
 void printBlocks()
 {
-    printf("------?????????------\n???? ");
+    printf("------位示图法显示磁盘块------\n磁盘块  ");
 
     for (int i = 0; i < 8; i++)
     {
@@ -15,33 +15,61 @@ void printBlocks()
         if(i!=0 && (i+1)%8==0 && i!=DISK_SIZE-1)
             printf("\n%d\t",(i/8)+1);
     }
+    printf("\n");
 }
-void printFile(struct File f[],int num)
+
+void printFile()
 {
-    for(int i=0;i<num;i++){
-        printf("fileId:%d   fileAddress:%d      \n",f[i].FileId,f[i].FileAddr);
-        
+    printf("文件ID\t起始地址\t文件内容\n");
+    for(int i=0;i<MAX_FILE_NUM;i++){
+        printf("%d\t%d\t\t",file[i].FileId,file[i].FileAddr);
+        for(int j=0;j<4;j++){
+            printf("%d  ",file[i].FileText[j]);
+        }
+        printf("\n");
     }
 }
+
 void printBuffPool()
 {
-    buffer_head *tmp = hinq;
-	printf("??????\t????\t?????\t??????\t\n");
+	buffer_head *tmp = hinq;
+	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
 		printf("inq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, linq->bufSize);
 		tmp = tmp->next;
 	}
-    tmp=houtq;
-    while (tmp)
-    {
-        printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n",tmp->bufNo,tmp->bufState, loutq->bufSize);
+	tmp = houtq;
+	while (tmp)
+	{
+		printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, loutq->bufSize);
+		tmp = tmp->next;
+	}
+	tmp = hemq;
+	while (tmp)
+	{
+		printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, lemq->bufSize);
+		tmp = tmp->next;
+	}
+}
+
+void printProcess()
+{
+    char *state[]={"null","Ready","Running","Block"};
+    struct Process* tmp=ReadyQueue;
+    printf("进程ID\t进程状态\t进程权限\t到达时间\t运行时间\t\n");
+    while(tmp){
+        printf("%d\t%s\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,state[tmp->state],tmp->mod,tmp->Rtime,tmp->time);
         tmp=tmp->next;
     }
-    tmp=hemq;
-    while (tmp)
-    {
-        printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n",tmp->bufNo,tmp->bufState, lemq->bufSize);
+    tmp=RunningQueue;
+    while(tmp){
+        printf("%d\t%s\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,state[tmp->state],tmp->mod,tmp->Rtime,tmp->time);
+        tmp=tmp->next;
+    }
+    tmp=BlockQueue;
+    while(tmp){
+        printf("%d\t%s\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,state[tmp->state],tmp->mod,tmp->Rtime,tmp->time);
         tmp=tmp->next;
     }
 }
@@ -49,7 +77,7 @@ void printBuffPool()
 void printInq()
 {
     buffer_head *tmp = hinq;
-	printf("??????\t????\t?????\t??????\t\n");
+	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
 		printf("inq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, linq->bufSize);
@@ -60,7 +88,7 @@ void printInq()
 void printOutq()
 {
     buffer_head *tmp = houtq;
-	printf("??????\t????\t?????\t??????\t\n");
+	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
 		printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, loutq->bufSize);
@@ -71,10 +99,32 @@ void printOutq()
 void printEmq()
 {
     buffer_head *tmp = hemq;
-	printf("??????\t????\t?????\t??????\t\n");
+	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
 		printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, lemq->bufSize);
 		tmp = tmp->next;
 	}
+}
+
+
+void rwUI()
+{
+    printFile();
+    struct Process *tmp=ReadyQueue;
+    for(int i=0;i<MAX_P_NUM;i++){
+        printf("进程%d想%c文件ID?:",i,tmp->mod);
+        scanf("%d",&readP[i]);
+        tmp=tmp->next;
+    }
+    
+}
+
+void viewUI()
+{
+    printf("--------任务资源管理器:--------\n");
+    printf("----  1.查看进程状态\t\n");
+    printf("----  2.查看文件\n");
+    printf("----  3.查看缓冲池\n");
+    printf("----  4.查看磁盘使用情况\n");
 }

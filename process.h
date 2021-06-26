@@ -37,11 +37,17 @@ struct Process {
 	struct Process* next;
 }*ReadyQueue,*RunningQueue,*BlockQueue;//就绪队列、执行队列、阻塞队列
 
+int readP[MAX_P_NUM];
 
+//RunningQueue就放一个进程
 
 void initProcess();
-void printProcess();
+
+void toRunning();	//就绪->运行
+void toBlock();	//就绪->阻塞(I/O)
+void toReady();	//阻塞->就绪(I/O完成)
+
 void readfile(int fileNum);
 void writefile(int fileNum);
-void rwUI();
-void viewUI();
+void getData(int bufNum);//Running Process get data from buf[bufNum]
+void putData(int bufNum);//Running Process put data into buf[bufNum]

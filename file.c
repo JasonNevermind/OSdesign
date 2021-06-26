@@ -16,25 +16,13 @@ void initFile()
     }
 }
 
-void printFile()
+void flushFile()
 {
-    printf("文件ID\t起始地址\t文件内容\n");
     for(int i=0;i<MAX_FILE_NUM;i++){
-        printf("%d\t%d\t\t",file[i].FileId,file[i].FileAddr);
         for(int j=0;j<4;j++){
-            printf("%d  ",file[i].FileText[j]);
+            file[i].FileText[j]=disks[file[i].FileAddr+j];
         }
-        printf("\n");
     }
 }
 
-/*
-    int main()
-{
 
-    initFile();
-    printFile();
-    return 0;
-}
-
-*/

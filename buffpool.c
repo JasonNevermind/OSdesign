@@ -3,12 +3,20 @@
 #include"process.c"
 
 
-void read(struct Buffer buf, struct File file)	//缓冲体读取
+void read(int bufNum, int fileNum)	//缓冲体读取(从文件里读)
 {
-	buf.address = file.FileAddr;
+	Buf[bufNum].address = file[fileNum].FileAddr;
 	for (int i = 0; i < 4; i++)
 	{
-		buf.blocks[i] = file.FileText[i];
+		Buf[bufNum].blocks[i] = file[fileNum].FileText[i];
+	}
+}
+void write(int bufNum)	//缓冲体写(写到磁盘上)
+{
+
+	for (int i = 0; i < 4; i++)
+	{
+		disks[Buf[bufNum].address+i] = Buf[bufNum].blocks[i] ;
 	}
 }
 
@@ -26,6 +34,8 @@ void flush() //输出缓冲outq写入disk
 		tmp = tmp->next;
 		free(t);
 	}
+	//磁盘块内容改了，相应的文件内容也得改
+	flushFile();
 }
 
 void initemq()
@@ -98,7 +108,7 @@ bool add_buf(int type, int numb)	//返回false,要执行LRU置换
 	}
 	else if (type == OUTQ)
 	{ //队列满了一次性写入(攒着，延迟写)
-		if(loutq!=NULL && loutq->bufSize==MAX_INQ_NUM){
+		if(loutq!=NULL && loutq->bufSize==MAX_OUTQ_NUM){
 			printf("输出缓冲队列已满，请进行写回!");	//写回flush()
 			return false;
 		}
@@ -114,7 +124,7 @@ bool add_buf(int type, int numb)	//返回false,要执行LRU置换
 			loutq = houtq;
 			return true;
 		}
-		if(loutq!=NULL && loutq->bufSize<MAX_INQ_NUM)
+		if(loutq!=NULL && loutq->bufSize<MAX_OUTQ_NUM)
 		{//没满，加到队尾
 			buffer_head *newp = (buffer_head *)malloc(sizeof(buffer_head));
 			newp->bufNo = numb;
@@ -200,28 +210,6 @@ void realse() //释放内存
 	}
 }
 
-void printBuffPool()
-{
-	buffer_head *tmp = hinq;
-	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
-	while (tmp)
-	{
-		printf("inq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, linq->bufSize);
-		tmp = tmp->next;
-	}
-	tmp = houtq;
-	while (tmp)
-	{
-		printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, loutq->bufSize);
-		tmp = tmp->next;
-	}
-	tmp = hemq;
-	while (tmp)
-	{
-		printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, lemq->bufSize);
-		tmp = tmp->next;
-	}
-}
 
 void inqLRU(int numb)
 {
@@ -249,13 +237,14 @@ bool SearchAndLRU(int address)
 			break;
 		if(address!=Buf[tmp->bufNo].address){
 			tmp=tmp->next;
+			father=father->next;
 			continue;
 		}
 		else break;
 	}
-	if(address!=Buf[father->bufNo].address)	//没找到
+	if(tmp==NULL && address!=Buf[father->bufNo].address)	//没找到
 		return false;
-	else{		//找到了并LRU
+	else if(address==Buf[tmp->bufNo].address){		//找到了并LRU
 		linq->next=father;
 		father->next=NULL;
 		linq=linq->next;
@@ -264,74 +253,3 @@ bool SearchAndLRU(int address)
 	
 }
 
-int main()
-{
-	initFile();
-	printFile();
-
-	getchar();
-	system("cls");
-	
-
-	initProcess();
-	printProcess();
-
-	getchar();
-	system("cls");
-
-
-	initemq();
-
-	//模拟进程一次活动
-	//process --request--> buffpool (read)
-	bool isFind = SearchAndLRU(file[0].FileAddr);
-
-
-	if(isFind==false){
-		//cant find
-		buffer_head *hin = take_buf(EMPQ);
-		//hin get disk data
-		bool b = add_buf(INQ, hin->bufNo);
-		if(!b)
-			inqLRU(hin->bufNo);
-		free(hin);
-		
-		buffer_head *sin = take_buf(INQ);
-		//process read sin's data
-		add_buf(EMPQ, sin->bufNo);
-		free(sin);
-	}
-	else if(isFind==true){
-		//can find
-		buffer_head *sin = take_buf(INQ);
-		//process read sin's data
-		add_buf(EMPQ, sin->bufNo);
-		free(sin);
-	}
-
-	
-
-	printBuffPool();
-	system("cls");
-
-	//process --request--> buffpool (write)
-
-
-	buffer_head *hout = take_buf(EMPQ);
-	//process write hout
-	bool b = add_buf(OUTQ, hout->bufNo);
-	if(!b){
-		flush();		//延迟写，等缓冲队列满了再写
-		add_buf(OUTQ,houtq->bufNo);
-	}
-	free(hout);
-
-	buffer_head *sout = take_buf(OUTQ); 
-	//disk get write-back data
-	add_buf(EMPQ, sout->bufNo);
-	free(sout);
-
-	printBuffPool();
-
-	return 0;
-}
