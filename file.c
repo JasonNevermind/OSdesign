@@ -1,8 +1,6 @@
 
 #include"file.h"
 
-
-
 //文件初始化
 void initFile()
 {
@@ -16,6 +14,18 @@ void initFile()
     }
 }
 
+void initFile1()
+{
+    for(int i=0;i<MAX_FILE_NUM;i++){
+        file[i].FileId=i;
+        file[i].FileAddr=rand()%300;
+        for(int j=0;j<4;j++){
+            file[i].FileText[j]=rand()%10;
+        }
+    }
+    flushBlock();
+}
+
 void flushFile()
 {
     for(int i=0;i<MAX_FILE_NUM;i++){
@@ -25,4 +35,11 @@ void flushFile()
     }
 }
 
-
+void flushBlock()
+{
+    for(int i=0;i<MAX_FILE_NUM;i++){
+        for(int j=0;j<4;j++){
+            disks[file[i].FileAddr+j]=file[i].FileText[j];
+        }
+    }
+}

@@ -30,25 +30,28 @@ void printFile()
     }
 }
 
+char *s[]={"EMPTY","FULL","NOTFULL","WORK","DIRTY"};
+
 void printBuffPool()
 {
+    
 	buffer_head *tmp = hinq;
 	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
-		printf("inq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, linq->bufSize);
+		printf("inq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], linq->bufSize);
 		tmp = tmp->next;
 	}
 	tmp = houtq;
 	while (tmp)
 	{
-		printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, loutq->bufSize);
+		printf("outq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], loutq->bufSize);
 		tmp = tmp->next;
 	}
 	tmp = hemq;
 	while (tmp)
 	{
-		printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, lemq->bufSize);
+		printf("emq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], lemq->bufSize);
 		tmp = tmp->next;
 	}
 }
@@ -56,13 +59,13 @@ void printBuffPool()
 void printProcess()
 {
     char *state[]={"null","Ready","Running","Block"};
-    struct Process* tmp=ReadyQueue;
+    struct Process* tmp=RunningQueue;
     printf("进程ID\t进程状态\t进程权限\t到达时间\t运行时间\t\n");
     while(tmp){
         printf("%d\t%s\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,state[tmp->state],tmp->mod,tmp->Rtime,tmp->time);
         tmp=tmp->next;
     }
-    tmp=RunningQueue;
+    tmp=ReadyQueue;
     while(tmp){
         printf("%d\t%s\t\t%c\t\t%d\t\t%d\t\t\n",tmp->PID,state[tmp->state],tmp->mod,tmp->Rtime,tmp->time);
         tmp=tmp->next;
@@ -80,7 +83,7 @@ void printInq()
 	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
-		printf("inq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, linq->bufSize);
+		printf("inq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], linq->bufSize);
 		tmp = tmp->next;
 	}
 }
@@ -91,7 +94,7 @@ void printOutq()
 	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
-		printf("outq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, loutq->bufSize);
+		printf("outq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], loutq->bufSize);
 		tmp = tmp->next;
 	}
 }
@@ -102,11 +105,19 @@ void printEmq()
 	printf("缓冲队列类型\t缓冲区号\t缓冲区状态\t缓冲队列大小\t\n");
 	while (tmp)
 	{
-		printf("emq\t\t%d\t\t%d\t\t\t%d\t\t\n", tmp->bufNo, tmp->bufState, lemq->bufSize);
+		printf("emq\t\t%d\t\t%s\t\t\t%d\t\t\n", tmp->bufNo,s[tmp->bufState], lemq->bufSize);
 		tmp = tmp->next;
 	}
 }
 
+void printFileToP()
+{
+    printf("进程ID\t\t文件ID\t\t读写权限\t\n");
+    struct Process* tmp=ReadyQueue;
+    for(int i=0;i<MAX_P_NUM;i++){
+        printf("%d\t\t%d\t\t%c\t\n",tmp->PID,readP[tmp->PID],tmp->mod);
+    }
+}
 
 void rwUI()
 {
@@ -117,7 +128,15 @@ void rwUI()
         scanf("%d",&readP[i]);
         tmp=tmp->next;
     }
-    
+}
+void rwUI1()
+{
+    struct Process *tmp=ReadyQueue;
+    for(int i=0;i<MAX_P_NUM;i++){
+        //srand((unsigned)time(NULL));
+        readP[i]=rand()%MAX_FILE_NUM;
+        tmp=tmp->next;
+    }
 }
 
 void viewUI()
@@ -127,4 +146,5 @@ void viewUI()
     printf("----  2.查看文件\n");
     printf("----  3.查看缓冲池\n");
     printf("----  4.查看磁盘使用情况\n");
+    printf("----  5.进程想要读写文件\n");
 }

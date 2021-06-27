@@ -26,6 +26,8 @@ void printOutq();
 
 void printEmq();
 
+void printFileToP();
+
 void rwUI();
 
 void viewUI();

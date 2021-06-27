@@ -9,8 +9,8 @@
 #pragma once
 
 #include"stdio.h"
-#define MAX_FILE_NUM 5
 #include"buffpool.h"
+#define MAX_FILE_NUM 5
 
 struct File
 {
@@ -22,8 +22,9 @@ struct File
 //文件到底跟磁盘块怎样建立联系？
 
 void initFile();
+void initFile1();
 void flushFile();   //文件刷新
-
+void flushBlock();  //磁盘刷新
 
 
 /*

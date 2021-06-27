@@ -143,7 +143,7 @@ bool add_buf(int type, int numb)	//返回false,要执行LRU置换
 		newp->bufNo = numb;
 		newp->bufPtr = 0;
 		newp->bufSize = lemq->bufSize + 1;
-		newp->bufState = FULL;
+		newp->bufState = EMPTY;
 		newp->next = NULL;
 		lemq->next = newp;
 		lemq = lemq->next;
@@ -197,6 +197,28 @@ void brelse() //延时写
 {
 }
 */
+void BufToDisk()
+{
+    buffer_head *sout = take_buf(OUTQ);
+	//disk get write-back data
+    write(sout->bufNo);
+
+	add_buf(EMPQ, sout->bufNo);
+	free(sout);
+}
+
+void DiskToBuf(int fileNum)
+{
+    buffer_head *hin = take_buf(EMPQ);
+	//hin get disk data
+    read( hin->bufNo, fileNum );
+
+	bool b = add_buf(INQ, hin->bufNo);
+	if(!b)
+		inqLRU(hin->bufNo);
+	free(hin);
+}
+
 void realse() //释放内存
 {
 	hemq->next = hinq;
@@ -216,7 +238,20 @@ void inqLRU(int numb)
 	if(!SearchAndLRU(Buf[numb].address)){
 		buffer_head* b=take_buf(INQ);
 		add_buf(EMPQ,b->bufNo);
+		read(numb,readP[ReadyQueue->PID]);
+		add_buf(INQ,numb);
 	}
+}
+
+bool Search(int address)
+{
+	buffer_head* tmp=hinq;
+	while(tmp){
+		if(Buf[tmp->bufNo].address==address)
+			return true;
+		tmp=tmp->next;
+	}
+	return false;
 }
 
 //缓冲区寻找，并进行LRU替换，返回值是查询结果

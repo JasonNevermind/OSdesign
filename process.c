@@ -3,9 +3,9 @@
 
 //读写文件------->最终目的！！！
 
-void initProcess()  //一开始都就绪队列(倒着建立的,先输入的在队列尾)
+void initProcess()  //一开始都就绪队列(先输入的在队列尾)
 {
-    ReadyQueue=(struct Process *)malloc(sizeof(struct Process));//头没用
+    ReadyQueue=(struct Process *)malloc(sizeof(struct Process));//虚拟头结点
     ReadyQueue->mod='x';
     ReadyQueue->PID=-1;
     ReadyQueue->Rtime=-1;
@@ -16,6 +16,8 @@ void initProcess()  //一开始都就绪队列(倒着建立的,先输入的在�
         struct Process* tmp=(struct Process *)malloc(sizeof(struct Process));
         tmp->PID=i;
         tmp->state=Ready;
+        for(int j=0;j<4;j++)
+            tmp->content[j]=0;
         tmp->next=NULL;
         s->next=tmp;
         printf("请输入进程%d的权限(mod),到达时间(Rtime),运行时间(time):\n",i);
@@ -31,11 +33,77 @@ void initProcess()  //一开始都就绪队列(倒着建立的,先输入的在�
             }
         }
         s=s->next;
+        lReady=s;
     }
     s=ReadyQueue;
     ReadyQueue=ReadyQueue->next;
     free(s);
 }
+
+void initProcess1()
+{
+    ReadyQueue=(struct Process *)malloc(sizeof(struct Process));//虚拟头结点
+    ReadyQueue->mod='x';
+    ReadyQueue->PID=-1;
+    ReadyQueue->Rtime=-1;
+    ReadyQueue->state=-1;
+    ReadyQueue->time=-1;
+    struct Process *s=ReadyQueue;
+    for(int i=0;i<MAX_P_NUM;i++){
+        struct Process* tmp=(struct Process *)malloc(sizeof(struct Process));
+        tmp->PID=i;
+        tmp->state=Ready;
+        for(int j=0;j<4;j++)
+            tmp->content[j]=0;
+        tmp->next=NULL;
+        s->next=tmp;
+        
+        int r=rand()%100;
+        if(r>50)    tmp->mod='r';
+        else tmp->mod='w';
+
+        tmp->Rtime=rand()%30;
+        tmp->time=rand()%10;
+
+        if(tmp->mod=='w'){
+            for(int i=0;i<4;i++){
+                tmp->content[i]=rand()%10;
+            }
+        }
+        s=s->next;
+        lReady=s;
+    }
+    s=ReadyQueue;
+    ReadyQueue=ReadyQueue->next;
+    free(s);
+}
+
+void sortPQue()//(early-->late)
+{
+    struct Process* p,*q;
+    p=ReadyQueue;
+    for(;p!=NULL;p=p->next)//选定的位置，从第一个位置开始
+    {
+        for(q=p->next;q!=NULL;q=q->next)//每次遍历一遍链表，只要比选定位置的数据小就交换
+        {
+            if(q->Rtime<p->Rtime)
+            {
+                struct Process* tmp=(struct Process*)malloc(sizeof(struct Process));
+                tmp->PID=q->PID;
+                tmp->Rtime=q->Rtime;
+                tmp->time=q->time;
+                q->PID=p->PID;
+                q->Rtime=p->Rtime;
+                q->time=p->time;
+                p->PID=tmp->PID;
+                p->Rtime=tmp->Rtime;
+                p->time=tmp->time;
+                free(tmp);
+            }
+        }
+    }
+}
+
 
 void getData(int bufNum)    //Running Process get data from buf[bufNum]
 {
@@ -46,6 +114,7 @@ void getData(int bufNum)    //Running Process get data from buf[bufNum]
 }
 void putData(int bufNum)    //Running Process put data into buf[bufNum]
 {
+    Buf[bufNum].address=file[readP[ReadyQueue->PID]].FileAddr;
     for(int i=0;i<4;i++)
     {
         Buf[bufNum].blocks[i]=RunningQueue->content[i];
@@ -53,84 +122,43 @@ void putData(int bufNum)    //Running Process put data into buf[bufNum]
 }
 
 
-void readfile(int fileNum)
-{//process x get file's content which is "x x x x".
-    
-    bool isFind = SearchAndLRU(file[fileNum].FileAddr);
-	if(isFind==false){
-		//cant find
-		buffer_head *hin = take_buf(EMPQ);
-		//hin get disk data
-        read( hin->bufNo, fileNum );
-		bool b = add_buf(INQ, hin->bufNo);
-		if(!b)
-			inqLRU(hin->bufNo);
-		free(hin);
-		
-		buffer_head *sin = take_buf(INQ);
-		//process read sin's data
-        getData(sin->bufNo);
-		add_buf(EMPQ, sin->bufNo);
-		free(sin);
-	}
-	else if(isFind==true){
-		//can find
-		buffer_head *sin = take_buf(INQ);
-		//process read sin's data
-        getData(sin->bufNo);
-		add_buf(EMPQ, sin->bufNo);
-		free(sin);
-	}
-    //print file's data
+void BufToPro()
+{
+    buffer_head *sin = take_buf(INQ);
+	//process read sin's data
+    getData(sin->bufNo);
 
-    //等待时间到
-    printf("进程%d读到的内容是：",RunningQueue->PID);
-    for(int i=0;i<4;i++){
-        printf("%d ",RunningQueue->content[i]);
-    }
-    printf("\n");
-
-    printf("进程%d任务已结束!\n",RunningQueue->PID);
-    struct Process *p=RunningQueue;
-    RunningQueue=NULL;
-    free(p);
+	add_buf(EMPQ, sin->bufNo);
+	free(sin);
 }
 
-void writefile(int fileNum)    //目的是先写到缓冲，再将它写到blocks
-{//process wirte file, file content has changed
-
+void ProToBuf()
+{
     buffer_head *hout = take_buf(EMPQ);
 	//process write hout
     putData(hout->bufNo);
+
 	bool b = add_buf(OUTQ, hout->bufNo);
 	if(!b){
 		flush();		//延迟写，等缓冲队列满了再写
 		add_buf(OUTQ,houtq->bufNo);
 	}
 	free(hout);
-
-	buffer_head *sout = take_buf(OUTQ);
-	//disk get write-back data
-    write(sout->bufNo);
-	add_buf(EMPQ, sout->bufNo);
-	free(sout);
-    //file context has changed
-
-    flushFile();
-    printf("进程%d内容已写入文件ID%d!\n",RunningQueue->PID,fileNum);
-    struct Process *p=RunningQueue;
-    RunningQueue=NULL;
-    free(p);
 }
+
+
 
 void toRunning()
 {
+    if(!ReadyQueue)
+        return;
     //每次从Ready头部拿一个Running
     struct Process* tmp=ReadyQueue;
     if(!RunningQueue){
         RunningQueue=tmp;
-        RunningQueue->next=NULL;
+        RunningQueue->state=Running;
         ReadyQueue=ReadyQueue->next;
+        RunningQueue->next=NULL;
     }
     else{
         printf("运行队列已满！");
@@ -140,51 +168,39 @@ void toRunning()
 void toBlock()
 {
     //每次从Ready头部拿一个放到Block尾部
-    struct Process* tmp=ReadyQueue;
-    tmp->next=NULL;
-    ReadyQueue=ReadyQueue->next;
-    struct Process* t=BlockQueue;
-    if(t==NULL){
-        BlockQueue=tmp;
+    if(!ReadyQueue)
         return;
+    struct Process* tmp=ReadyQueue;
+    ReadyQueue=ReadyQueue->next;
+    tmp->next=NULL;
+    if(!BlockQueue){
+        BlockQueue=tmp;
+        BlockQueue->state=block;
+        lBlock=BlockQueue;
     }
-    struct Process* f=BlockQueue;
-    t=f->next;
-    while(t && !t->next){
-        f=f->next;
-        t=t->next;
+    else{
+        lBlock->next=tmp;
+        lBlock=lBlock->next;
+        lBlock->state=block;
     }
-    if(!t){
-        f->next=tmp;
-        return ;
-    }
-    f->next==NULL;
-    t->next=BlockQueue;
-    BlockQueue=t;
 }
 
 void toReady()
 {
-    //每次从Block头部拿一个放到Ready尾部
-    struct Process* tmp=ReadyQueue;
-    tmp->next=NULL;
-    ReadyQueue=ReadyQueue->next;
-    struct Process* t=BlockQueue;
-    if(t==NULL){
-        BlockQueue=tmp;
+    //每次从Block头部拿一个放到Ready头部
+    if(!BlockQueue)
         return;
+    struct Process* tmp=BlockQueue;
+    BlockQueue=BlockQueue->next;
+    tmp->next=NULL;
+    if(!ReadyQueue){
+        ReadyQueue=tmp;
+        ReadyQueue->state=Ready;
+        lReady=ReadyQueue;
     }
-    struct Process* f=BlockQueue;
-    t=f->next;
-    while(t && !t->next){
-        f=f->next;
-        t=t->next;
+    else{
+        tmp->next=ReadyQueue;
+        tmp->state=Ready;
+        ReadyQueue=tmp;
     }
-    if(!t){
-        f->next=tmp;
-        return ;
-    }
-    f->next==NULL;
-    t->next=BlockQueue;
-    BlockQueue=t;
 }

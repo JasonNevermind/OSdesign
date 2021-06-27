@@ -14,6 +14,7 @@
 #define NOTFULL 2   //缓冲区没满
 #define WORK 3  //缓冲区工作
 #define DIRTY 4 //缓冲区脏，要写回
+
 #define EMPQ -1
 #define INQ -2 
 #define OUTQ -3
@@ -35,10 +36,8 @@ void inqLRU(int numb);
 bool add_buf(int type, int number);
 struct buf_head* take_buf(int type);
 
-void put_buf(int type,int work_buf);
-void get_buf(int type);
-
-void printBuffPool();
+void BufToDisk();
+void DiskToBuf(int fileNum);
 
 
 int disks[DISK_SIZE];
