@@ -112,10 +112,16 @@ void printEmq()
 
 void printFileToP()
 {
-    printf("进程ID\t\t文件ID\t\t读写权限\t\n");
+    printf("进程ID\t\t文件ID\t\t读写权限\t进程内容\t文件内容\n");
     struct Process* tmp=ReadyQueue;
-    for(int i=0;i<MAX_P_NUM;i++){
-        printf("%d\t\t%d\t\t%c\t\n",tmp->PID,readP[tmp->PID],tmp->mod);
+    for(;tmp;tmp=tmp->next){
+        printf("%d\t\t%d\t\t%c\t\t",tmp->PID,readP[tmp->PID],tmp->mod);
+        for(int i=0;i<4;i++)
+            printf("%d ",tmp->content[i]);
+        printf("\t");
+        for(int i=0;i<4;i++)
+            printf("%d ",file[readP[tmp->PID]].FileText[i]);
+        printf("\n");
     }
 }
 

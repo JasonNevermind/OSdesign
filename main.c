@@ -69,11 +69,11 @@ void initialization1()
     printf("随机生成成功！\n");
     printf("是否要查看生成的项目？(y/n)");
     char c;
-    scanf("%c",&c);
+    scanf(" %c",&c);
+    system("cls");
     if(c=='y'){
         OS_status();
     }
-    system("cls");
 }
 
 void OS_status()
@@ -101,6 +101,7 @@ void OS_status()
                 break;
             case 5:
                 printFileToP();
+                break;
             default:
                 printf("无法识别\n");
                 break;
@@ -109,7 +110,6 @@ void OS_status()
         
         char c;
         printf("还想查看其他资源吗？(y/n)",&c);
-        printf("输入编号以继续...");
         scanf(" %c",&c);
         system("cls");
         if(c=='n')
@@ -122,7 +122,10 @@ void OS_status()
 
 void OS_main()
 {
-    initialization();
+    if(initmod==1)
+        initialization1();
+    else if(initmod==2)
+        initialization();
     while(1)
     {
         printf("-------------当前时间:%ds(运行)\n",OS_TIME);
@@ -209,10 +212,104 @@ void OS_main()
     getch();
 }
 
+void CALLBACK TimerProc(HWND hWnd,UINT uMsg,UINT idEvent,DWORD dwTime){    //回调函数 
+	printf("-------------当前时间:%ds(运行)\n",OS_TIME);
+    if( !ReadyQueue && !RunningQueue && !BlockQueue){
+        printf("Brabo！所有工作已做完！\n");
+        getch();
+        return;
+    }
+    //判断当前时间是否有阻塞-->就绪的进程
+    if(BlockQueue && BlockQueue->mod=='r'){        //有阻塞,每一秒执行一次IO(读进程)
+        DiskToBuf(readP[BlockQueue->PID]);
+        if(Search(file[readP[BlockQueue->PID]].FileAddr)){
+            printf("阻塞进程%d已进入就绪！\n",BlockQueue->PID);
+            toReady();
+        }
+    }
+    if(!RunningQueue){
+        if(OS_TIME>=ReadyQueue->Rtime){
+            
+            if(!Search(file[readP[ReadyQueue->PID]].FileAddr) && ReadyQueue->mod=='r'){    //没找到
+                toBlock();
+                printf("当前已阻塞进程ID%d！\n",lBlock->PID);
+            }
+            else{
+                toRunning();
+                if(RunningQueue->mod=='w')
+                    ProToBuf();
+                runP_TIME=OS_TIME;
+                printf("当前开始运行进程ID%d！\n",RunningQueue->PID);
+            }
+        }
+        else{
+            printf("当前未有进程到达...\n");
+        }
+    }
+    else{
+        if(ReadyQueue && !Search(file[readP[ReadyQueue->PID]].FileAddr) && ReadyQueue->mod=='r'){    //没找到
+            toBlock();
+            printf("当前已阻塞进程ID%d！\n",lBlock->PID);
+        }
+        
+        if(OS_TIME >= RunningQueue->time+runP_TIME ){
+            if(RunningQueue->mod=='r'){
+                BufToPro();
+                printf("进程%d读到的内容是：",RunningQueue->PID);
+                for(int i=0;i<4;i++){
+                    printf("%d ",RunningQueue->content[i]);
+                }
+                printf("\n");
+                free(RunningQueue);
+                RunningQueue=NULL;
+            }
+            else if(RunningQueue->mod=='w'){
+                printf("进程ID%d写入磁盘，请查看磁盘及文件资源！\n",RunningQueue->PID);
+                BufToDisk();
+                //file context has changed
+                flushFile();
+                free(RunningQueue);
+                RunningQueue=NULL;
+            }
+        }
+        else    printf("当前运行进程ID%d\n",RunningQueue->PID);
+    }
+    printProcess();
+    char c;
+    printf("想要查看更多系统资源吗？(y/n)");
+    scanf(" %c",&c);
+    if(c=='y'){
+        system("cls");
+        OS_status();
+    }
+    OS_TIME++;
+    system("cls");
+}
+
+void OS_main1()
+{
+    if(initmod==1)
+        initialization1();
+    else if(initmod==2)
+        initialization();
+    
+    MSG Msg;
+	SetTimer(NULL,1,1000,TimerProc);   //每隔一秒钟触发一次
+
+	 while(GetMessage(&Msg, NULL, 0, 0)){
+        DispatchMessage(&Msg);
+        if(kbhit()>0)   //当有键盘按下时程序结束
+            break;
+    }
+	KillTimer(NULL,1);   //销毁定时器
+}
 
 int main()
 {
-    //OS_main();
-	initialization1();
+    menu();
+    if(tmod=='a')
+        OS_main();
+    else if(tmod=='b')
+        OS_main1();
     return 0;
 }

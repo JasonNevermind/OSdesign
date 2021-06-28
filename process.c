@@ -114,7 +114,7 @@ void getData(int bufNum)    //Running Process get data from buf[bufNum]
 }
 void putData(int bufNum)    //Running Process put data into buf[bufNum]
 {
-    Buf[bufNum].address=file[readP[ReadyQueue->PID]].FileAddr;
+    Buf[bufNum].address=file[readP[RunningQueue->PID]].FileAddr;
     for(int i=0;i<4;i++)
     {
         Buf[bufNum].blocks[i]=RunningQueue->content[i];
